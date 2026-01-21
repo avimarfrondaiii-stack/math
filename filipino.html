@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="tl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Filipino 10 RUQA - Professional Reviewer</title>
+    <style>
+        :root {
+            --blue: #0038a8;
+            --red: #ce1126;
+            --yellow: #fcd116;
+            --white: #ffffff;
+        }
+
+        body {
+            background-color: #e5e5e5;
+            font-family: 'Arial Black', Gadget, sans-serif;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .main-box {
+            background: var(--white);
+            width: 95%;
+            max-width: 900px;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border-top: 15px solid var(--blue);
+            border-bottom: 15px solid var(--red);
+            text-align: center;
+        }
+
+        .step-indicator {
+            font-family: Arial, sans-serif;
+            font-size: 20px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        /* FONT SIZE 50 PARA SA TANONG */
+        #question-display {
+            font-size: 50px;
+            color: #1a1a1a;
+            margin: 30px 0;
+            line-height: 1.2;
+            min-height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-transform: uppercase;
+        }
+
+        .options-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .choice-btn {
+            background: var(--white);
+            border: 4px solid var(--blue);
+            padding: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .choice-btn:hover {
+            background: var(--yellow);
+            transform: scale(1.02);
+        }
+
+        /* RESULT STYLES */
+        #result-section { display: none; }
+        
+        .score-circle {
+            font-size: 100px;
+            color: var(--blue);
+            margin: 20px 0;
+            border: 10px solid var(--yellow);
+            display: inline-block;
+            padding: 20px 40px;
+            border-radius: 50%;
+        }
+
+        .recommendation-box {
+            background: #f9f9f9;
+            border-left: 10px solid var(--red);
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
+            font-family: Arial, sans-serif;
+            font-size: 22px;
+            line-height: 1.5;
+        }
+
+        .restart-btn {
+            background: var(--red);
+            color: white;
+            padding: 20px 40px;
+            font-size: 24px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 700px) {
+            #question-display { font-size: 28px; }
+            .options-container { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="main-box">
+    <div id="quiz-ui">
+        <div class="step-indicator">TANONG <span id="q-idx">1</span> / 50</div>
+        <div id="question-display">Loading...</div>
+        <div class="options-container" id="choices-ui"></div>
+    </div>
+
+    <div id="result-section">
+        <h1 style="color: var(--blue); font-size: 40px;">RESULTA NG PAGSUSULIT</h1>
+        <div class="score-circle" id="final-score">0</div>
+        
+        <div class="recommendation-box" id="rec-text">
+            </div>
+
+        <button class="restart-btn" onclick="location.reload()">ULITIN ANG PAGSUSULIT</button>
+    </div>
+</div>
+
+<script>
+    // Pinagsama-samang mahahalagang tanong mula sa RUQA
+    const masterBank = [
+        { q: "Sino ang bayaning may lihim na kahinaan sa pusod?", a: "Liongo", o: ["Liongo", "Sundiata", "Mullah", "Mohametano"] },
+        { q: "Anong sandata ang tanging makakapatay kay Liongo?", a: "Karayom", o: ["Karayom", "Espada", "Sibat", "Busog"] },
+        { q: "Ano ang naging kapansanan ni Sundiata?", a: "Lumpo", o: ["Lumpo", "Bulag", "Pipi", "Bingi"] },
+        { q: "Sino ang haring naniniwalang ang paglilingkod ay higit sa pagsamba?", a: "Mongheng Mohametano", o: ["Mongheng Mohametano", "Sundiata", "Liongo", "Soumaoro"] },
+        { q: "Ano ang tunguhin ng pagsasaling-wika?", a: "Pinakamalapit na katumbas", o: ["Pinakamalapit na katumbas", "Literal na salita", "Maikling bersyon", "Bagong istilo"] },
+        { q: "Sa antas ng damdamin, ano ang pinakamatindi?", a: "Ngitngit", o: ["Ngitngit", "Poot", "Galit", "Inis"] },
+        { q: "Sino ang nagtaksil kay Liongo?", a: "Kanyang anak", o: ["Kanyang anak", "Kanyang asawa", "Kanyang pinsan", "Ang mga Watwa"] },
+        { q: "Ano ang tawag sa maikling kuwento tungkol sa nakatutuwang pangyayari?", a: "Anekdota", o: ["Anekdota", "Mitolohiya", "Epiko", "Sanaysay"] },
+        { q: "Anong bansa nagmula ang epiko ni Sundiata?", a: "Mali", o: ["Mali", "Kenya", "Uganda", "Pilipinas"] },
+        { q: "Ano ang kahulugan ng 'Itaga sa bato'?", a: "Tandaan/Pangako", o: ["Tandaan/Pangako", "Magalit", "Lumaban", "Magtago"] }
+    ];
+
+    // Pagbuo ng 50 items (Randomized order)
+    let quizQuestions = [];
+    while(quizQuestions.length < 50) {
+        let rand = masterBank[Math.floor(Math.random() * masterBank.length)];
+        quizQuestions.push({...rand});
+    }
+
+    let current = 0;
+    let score = 0;
+
+    function renderQuestion() {
+        const item = quizQuestions[current];
+        document.getElementById('q-idx').innerText = current + 1;
+        document.getElementById('question-display').innerText = item.q;
+        
+        const choicesDiv = document.getElementById('choices-ui');
+        choicesDiv.innerHTML = '';
+
+        // Shuffle A-D randomly
+        let shuffled = [...item.o].sort(() => Math.random() - 0.5);
+
+        shuffled.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'choice-btn';
+            btn.innerText = opt;
+            btn.onclick = () => {
+                if(opt === item.a) score++;
+                current++;
+                if(current < 50) renderQuestion();
+                else showFinal();
+            };
+            choicesDiv.appendChild(btn);
+        });
+    }
+
+    function showFinal() {
+        document.getElementById('quiz-ui').style.display = 'none';
+        document.getElementById('result-section').style.display = 'block';
+        document.getElementById('final-score').innerText = score;
+
+        const recBox = document.getElementById('rec-text');
+        let recommendation = "";
+
+        if(score === 50) {
+            recommendation = "<strong>REKOMENDASYON:</strong> Perpekto! Handa ka na para sa tunay na RUQA. Maaari mo nang tulungan ang iyong mga kaklase sa pagre-review.";
+        } else if(score >= 40) {
+            recommendation = "<strong>REKOMENDASYON:</strong> Napakahusay! Kaunting pansin na lamang sa mga <em>Analohiya</em> at <em>Pagsasaling-wika</em> upang makuha ang perpektong iskor.";
+        } else if(score >= 25) {
+            recommendation = "<strong>REKOMENDASYON:</strong> Mainam ang iyong iskor pero kailangan mo pang balikan ang mga sumusunod: <br>1. Pagkakaiba ng Tuwiran at Di-tuwirang pahayag. <br>2. Pag-aayos ng sidhi ng damdamin (Inis -> Ngitngit).";
+        } else {
+            recommendation = "<strong>REKOMENDASYON:</strong> Kailangan mo ng mas malalim na pagbabasa. Tutukan ang mga <em>Elemento ng Epiko</em> (Sundiata) at ang <em>Lihim ni Liongo</em>. Huwag kalimutang mag-practice ng Semantic Mapping.";
+        }
+
+        recBox.innerHTML = recommendation;
+    }
+
+    renderQuestion();
+</script>
+
+</body>
+</html>
